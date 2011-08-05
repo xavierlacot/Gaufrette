@@ -31,7 +31,7 @@ class Local implements Adapter
     public function __construct($directory, $create = false)
     {
         $this->directory = $this->normalizePath($directory);
-        $this->ensureDirectoryExists($this->directory, $create);
+        $this->ensureDirectoryExists('', $create);
     }
 
     /**
@@ -81,17 +81,17 @@ class Local implements Adapter
      */
     public function exists($key)
     {
-        return is_file($this->computePath($key));
+        return file_exists($this->computePath($key));
     }
 
     /**
      * {@InheritDoc}
      */
-    public function keys()
+    public function keys($key)
     {
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator(
-                $this->directory,
+                $this->computePath($key),
                 FilesystemIterator::SKIP_DOTS | FilesystemIterator::UNIX_PATHS
             )
         );
@@ -101,7 +101,7 @@ class Local implements Adapter
         $self = $this;
         return array_values(
             array_map(
-                function($file) use ($self) {
+                function($file) use ($self, $key) {
                     return $self->computeKey(strval($file));
                 },
                 $files
@@ -130,9 +130,34 @@ class Local implements Adapter
      */
     public function delete($key)
     {
-        if (!unlink($this->computePath($key))) {
-            throw new \RuntimeException(sprintf('Could not remove the \'%s\' file.', $key));
+        $path = $this->computePath($key);
+
+        if (file_exists($path)) {
+            if (is_dir($path)) {
+                foreach (scandir($path) as $entry) {
+                    if ($entry == '.' || $entry == '..') continue;
+
+                    try {
+                        $this->delete($key.DIRECTORY_SEPARATOR.$entry);
+                    } catch (RuntimeException $e) {
+                        // try to change the rights
+                        chmod($key.DIRECTORY_SEPARATOR.$entry, 0777);
+                        $this->delete($key.DIRECTORY_SEPARATOR.$entry);
+                    }
+                }
+
+                if (!rmdir($path)) {
+                    throw new \RuntimeException(sprintf('Could not remove the \'%s\' directory.', $key));
+                }
+            }
+            else
+            {
+                if (!unlink($path)) {
+                    throw new \RuntimeException(sprintf('Could not remove the \'%s\' file.', $key));
+                }
+            }
         }
+
     }
 
     /**
@@ -197,7 +222,7 @@ class Local implements Adapter
      */
     public function ensureDirectoryExists($directory, $create = false)
     {
-        if (!is_dir($directory)) {
+        if (!is_dir($this->computePath($directory))) {
             if (!$create) {
                 throw new \RuntimeException(sprintf('The directory \'%s\' does not exist.', $directory));
             }
@@ -216,12 +241,14 @@ class Local implements Adapter
      */
     public function createDirectory($directory)
     {
-        if (is_dir($directory)) {
+        $path = $this->computePath($directory);
+
+        if (is_dir($path)) {
             throw new \InvalidArgumentException(sprintf('The directory \'%s\' already exists.', $directory));
         }
 
         $umask = umask(0);
-        $created = mkdir($directory, 0777, true);
+        $created = mkdir($path, 0777, true);
         umask($umask);
 
         if (!$created) {

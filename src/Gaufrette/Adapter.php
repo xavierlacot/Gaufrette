@@ -42,9 +42,11 @@ interface Adapter
     /**
      * Returns an array of all keys matching the specified pattern
      *
+     * @param  string $key
+     *
      * @return array
      */
-    function keys();
+    function keys($key);
 
     /**
      * Returns the last modified time

@@ -126,11 +126,13 @@ class Filesystem
     /**
      * Returns an array of all keys matching the specified pattern
      *
+     * @param  string $key
+     *
      * @return array
      */
-    public function keys()
+    public function keys($key)
     {
-        return $this->adapter->keys();
+        return $this->adapter->keys($key);
     }
 
     /**
