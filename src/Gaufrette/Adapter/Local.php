@@ -76,6 +76,17 @@ class Local implements Adapter
         }
     }
 
+
+    /**
+     * {@InheritDoc}
+     */
+    public function copy($key, $new)
+    {
+        if (!copy($this->computePath($key), $this->computePath($new))) {
+            throw new \RuntimeException(sprintf('Could not copy the \'%s\' file to \'%s\'.', $key, $new));
+        }
+    }
+
     /**
      * {@InheritDoc}
      */

@@ -84,4 +84,14 @@ interface Adapter
      * @throws RuntimeException on failure
      */
     function rename($key, $new);
+
+    /**
+     * Copy a file
+     *
+     * @param string $key
+     * @param string $new
+     *
+     * @throws RuntimeException on failure
+     */
+    function copy($key, $new);
 }
